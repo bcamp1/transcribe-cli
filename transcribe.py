@@ -2,6 +2,11 @@
 
 import typer
 import subprocess
+import os
+from pathlib import Path
+
+transcribe_path = Path("~/transcribe")
+ENV_VAR_NAME = "TRANSCRIBE_PATH"
 
 app = typer.Typer()
 
@@ -18,7 +23,6 @@ def execute_command_safe(command: str):
         panic("Error: The above command failed")
         return ""
 
-@app.command()
 def get_filename_from_url(url: str, video: bool = False):
     title = execute_command_safe("yt-dlp --get-title " + url)
     filename = title.lower().strip().replace(' ', '-')
@@ -29,7 +33,14 @@ def get_filename_from_url(url: str, video: bool = False):
     print(filename)
     return filename
 
-@app.command()
+def get_filename_from_search(search_str: str, video: bool = False):
+    filename = search_str.lower().strip().replace(' ', '-')
+    if video:
+        filename += ".mp4"
+    else:
+        filename += ".mp3"
+    return filename
+
 def download_url(url: str, output_fname: str):
     extension = output_fname.split('.')[1]
     if extension == "mp3":
@@ -40,7 +51,9 @@ def download_url(url: str, output_fname: str):
         include_video = False
         panic("Invalid extension type: " + extension)
 
-    yt_dlp_options = "-o " + output_fname
+    full_path = transcribe_path / "sources" / output_fname
+
+    yt_dlp_options = "-o " + str(full_path)
 
     if include_video:
         yt_dlp_options += " -t mp4"
@@ -50,81 +63,38 @@ def download_url(url: str, output_fname: str):
     yt_dlp_cmd = f'yt-dlp {yt_dlp_options} "{url}"'
     print(execute_command_safe(yt_dlp_cmd))
 
-@app.command()
-def find(name: str):
-    print(f"Hello {name}")
+def get_url_from_search(search_str: str):
+    search_cmd = f'yt-dlp "ytsearch1:{search_str}" --get-id'
+    id = execute_command_safe(search_cmd).strip()
+    url = "https://www.youtube.com/watch?v=" + id
+    print(url)
+    return url
 
 @app.command()
-def download(url: str):
-    pass
+def fetch(search_str: str, video: bool = False):
+    print("Finding URL from search term...")
+    url = get_url_from_search(search_str)
+    output_fname = get_filename_from_search(search_str, video=video)     
+    print("Downloading " + url)
+    download_url(url, output_fname)
 
 @app.command()
-def open(name: str, formal: bool = False):
-    if formal:
-        print(f"Goodbye Ms. {name}. Have a good day.")
-    else:
-        print(f"Bye {name}!")
+def fetch_url(url: str, video: bool = False):
+    output_fname = get_filename_from_url(url, video=video)     
+    print("Downloading " + url)
+    download_url(url, output_fname)
+
+@app.command()
+def open(name: str):
+    print("Open " + name)
 
 if __name__ == "__main__":
+    # Get path from environment variable
+    env_path = os.environ.get(ENV_VAR_NAME)
+    if env_path is not None:
+        transcribe_path = Path(env_path)
+    print("Using path " + str(transcribe_path))
+    execute_command_safe("mkdir -p " + str(transcribe_path))
     app()
 
-"""
-def get_youtube_title(url: str):
-    yt = YouTube(url)
-    return yt.title
-
-def main(item: str, video: bool = False, output: str = "default"):
-    item_is_link = item.startswith('http')
-    output_fname = ""
-
-    if item_is_link:
-        # Get URL information
-        #title = get_youtube_title(item)
-        title = "Hi"
-        output_fname = title.lower().strip().replace(' ', '-') if output == "default" else output
-    else:
-        output_fname = item.lower().strip().replace(' ', '-') if output == "default" else output
-
-    if video:
-        output_fname += ".mp4"
-    else:
-        output_fname += ".mp3"
-
-    youtube_link = ''
-    if item_is_link:
-        youtube_link = item
-    else:
-        print("Searching for best-fit video link...")
-        fuzzy_cmd = f'yt-dlp "ytsearch1:{item}" --get-id'
-        try:
-            result = subprocess.run(fuzzy_cmd, shell=True, capture_output=True, text=True)
-            youtube_code = result.stdout.strip()
-            youtube_link = 'https://www.youtube.com/watch?v=' + youtube_code
-        except subprocess.CalledProcessError:
-            print("Error: fuzzy finder command failed")
-            exit(1)
-
-
-    print("Downloading " + ("video" if video else "audo") + " from " + youtube_link + "...")
-
-    yt_dlp_options = "-o " + output_fname
-
-    if video:
-        yt_dlp_options += " -t mp4"
-    else:
-        yt_dlp_options += " -t mp3"
-
-    yt_dlp_cmd = f'yt-dlp {yt_dlp_options} "{youtube_link}"'
-    print(yt_dlp_cmd)
-    try:
-        result = subprocess.run(yt_dlp_cmd, shell=True, capture_output=True, text=True)
-        print("Done!")
-    except subprocess.CalledProcessError:
-        print("Error: yt-dlp command failed")
-        exit(1)
-
-
-if __name__ == "__main__":
-    typer.run(main)
-"""
 
