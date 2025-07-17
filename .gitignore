@@ -1,0 +1,6 @@
+*.mp3
+*.mp4
+*.xcs
+.DS_Store
+__pycache__
+
