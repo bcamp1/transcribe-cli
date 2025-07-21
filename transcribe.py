@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 import typer
 import subprocess
@@ -23,7 +23,7 @@ def execute_command_safe(command: str, silent: bool = False):
         print("Running Command: " + command)
     try:
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        return result.stdout.strip()
+        return result.stdout.strip() + '\n' + result.stderr.strip()
     except subprocess.CalledProcessError:
         panic("Error: The above command failed")
         return ""
