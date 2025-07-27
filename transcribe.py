@@ -38,6 +38,14 @@ def get_filename_from_url(url: str, video: bool = False):
     print(filename)
     return filename
 
+def get_filename_from_name(name: str, video: bool = False):
+    filename = name
+    if video:
+        filename += ".mp4"
+    else:
+        filename += ".mp3"
+    return filename
+
 def get_filename_from_search(search_str: str, video: bool = False):
     filename = search_str.lower().strip().replace(' ', '-')
     if video:
@@ -92,8 +100,11 @@ def fetch(search_str: str, video: bool = False, open: bool = False):
         open_transcribe_at_relative(output_fname)
 
 @app.command()
-def fetch_url(url: str, video: bool = False, open: bool = False):
-    output_fname = get_filename_from_url(url, video=video)     
+def fetch_url(url: str, name: str = "", video: bool = False, open: bool = False):
+    if name == "":
+        output_fname = get_filename_from_url(url, video=video)     
+    else:
+        output_fname = get_filename_from_name(name, video=video)     
     print("Downloading " + url)
     download_url(url, output_fname)
     if open:
